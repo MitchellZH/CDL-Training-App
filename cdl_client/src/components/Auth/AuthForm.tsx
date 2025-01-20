@@ -1,43 +1,32 @@
-import React, { useState } from "react";
-import axios, { AxiosError } from "axios";
+import React, { useState, useContext } from "react";
+import axios from "axios";
 import api from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface AuthFormProps {
   type: "login" | "register";
 }
 
-interface ErrorResponse {
-  error: string;
-}
-
 const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
+  const { login } = useContext(AuthContext); // Use login from AuthContext
+  const navigate = useNavigate(); // Initialize navigate
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault(); // Prevent default form submission
     const endpoint = type === "login" ? "/auth/login" : "/auth/register";
     try {
       const response = await api.post(endpoint, { email, password });
-      setMessage(`Success: ${type === "login" ? "Logged in!" : "Registered!"}`);
-      if (type === "login") {
-        localStorage.setItem("token", response.data.token); // Save the token for login
-      }
-    } catch (error: unknown) {
+      setMessage("Success: Logged in!");
+      login(response.data.token);
+      navigate("/dashboard");
+    } catch (error) {
       if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<ErrorResponse>;
-        if (axiosError.response) {
-          const { status, data } = axiosError.response;
-          if (status === 400) {
-            setMessage(`Error: ${data.error || "Invalid input data."}`);
-          } else if (status === 401) {
-            setMessage("Error: Unauthorized. Please check your credentials.");
-          } else {
-            setMessage(`Error: ${data.error || "Unexpected server error."}`);
-          }
-        } else {
-          setMessage("Error: Network issue or unexpected error.");
-        }
+        const errorMessage = error.response?.data?.error || "Unexpected error.";
+        setMessage(`Error: ${errorMessage}`);
       } else {
         setMessage("Error: An unexpected error occurred.");
       }
@@ -45,7 +34,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   };
 
   return (
-    <div>
+    <form onSubmit={handleSubmit}>
       <h2>{type === "login" ? "Login" : "Register"}</h2>
       <input
         type="email"
@@ -59,12 +48,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
       />
-      <button onClick={handleSubmit}>
+      <button type="submit">
         {type === "login" ? "Log In" : "Register"}
       </button>
       {message && <p>{message}</p>}
-    </div>
+    </form>
   );
 };
 
-export default AuthForm;
+export default React.memo(AuthForm);

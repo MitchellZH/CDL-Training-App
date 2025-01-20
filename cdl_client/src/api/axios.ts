@@ -27,13 +27,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    console.log("Response Interceptor caught an error:", error);
     if (error.response?.status === 401) {
-      localStorage.removeItem("token"); // Clear token
-      window.location.href = "/login"; // Redirect to login
+      console.log("Handling 401 globally, clearing token");
+      localStorage.removeItem("token");
+      // Do NOT redirect here. Let the local error handler decide.
     }
-    return Promise.reject(error);
+    return Promise.reject(error); // Re-throw the error
   }
 );
+
+
 
 export { AxiosError }; // Export for error handling in other files
 export default api;
